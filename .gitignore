@@ -4,6 +4,6 @@
 
 #vs insider
 .vs/
-
+.vscode/
 #Node modules
 node_modules/

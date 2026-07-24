@@ -113,10 +113,10 @@ try {
     }
 
 } catch(error){
-    console.error("Error in auth-handler function:",error);
+    //console.error("Error in auth-handler function:",error);
     return new Response(
         JSON.stringify(
-            {error:"Internal server error"}
+            {error:"Internal server error"+error}
         ),
         {
             status:500,
@@ -179,11 +179,11 @@ async function handleSignUp(first_name: string,last_name: string,email:string,pa
             }
         );
     } catch(error){
-        console.error("Signup error:",error);
+        //console.error("Signup error:",error);
         return new Response(
             JSON.stringify(
                 {
-                    error:"Signup failed"
+                    error:"Signup failed error:" +error
                 }
             ),
             {
@@ -251,7 +251,7 @@ async function handleLogIn(email:string,password:string,user_id:string) {
         email: email,
         password: password
         });
-
+        const ip = await getPublicIP();
         if(error){
             /**
              * add lockout timing logic
@@ -259,9 +259,10 @@ async function handleLogIn(email:string,password:string,user_id:string) {
             
 
 
-            const ip = await getPublicIP();
+            
             addLogInAttempts(email,user_id,ip,false, Date.now());
-
+            getLogInAttempts(email,user_id);
+            
             return new Response(
                 JSON.stringify(
                     {
@@ -274,8 +275,8 @@ async function handleLogIn(email:string,password:string,user_id:string) {
                 }
             );
         }
-
-
+        addLogInAttempts(email,user_id,ip,true, Date.now());
+        addSuccessAttempt(email);
         return new Response(
             JSON.stringify(
                 {
@@ -293,11 +294,11 @@ async function handleLogIn(email:string,password:string,user_id:string) {
         );
 
     } catch(error){
-        console.error("Login error:",error);
+        //console.error("Login error:",error);
         return new Response(
             JSON.stringify(
                 {
-                    error:"Login failed"
+                    error:"Login failed error:"+error
                 }
             ),
             {
@@ -316,9 +317,7 @@ async function getPublicIP(){
       const response = await axios.get("https://api.ipify.org?format=json");
       return response.data.ip;
     }catch(error){
-        /**
-         * 
-         *         return new Response(
+        return new Response(
             JSON.stringify(
                 {
                     error: "Failed to fetch IP error: "+error
@@ -331,8 +330,8 @@ async function getPublicIP(){
         );
 
 
-         */
-        console.error("Failed to fetch IP error: ",error)
+
+        //console.error("Failed to fetch IP error: ",error)
     }
 }
 //validate functions
@@ -483,11 +482,11 @@ async function validateAccountLockOut(email:string){
 
 
         } catch(error){
-        console.error("acount_lockout validation error:",error);
+        //console.error("acount_lockout validation error:",error);
         return new Response(
             JSON.stringify(
                 {
-                    error:"acount_lockout validation failed"
+                    error:"acount_lockout validation failed error:"+error
                 }
             ),
             {
@@ -504,12 +503,12 @@ async function addLogInAttempts(email:string ,user_id:string,ip_address:string,s
             
    try {
 
-             const { data, error } = await supabase
+             const {  error } = await supabase
             .from('login_attempts')
             .insert([
                 { id: user_id, email: email, ip_address: ip_address  , success: success, attempted_at:attempted_at },
             ])
-            .select()
+            //.select()
 
             if(error){
             return new Response(
@@ -530,7 +529,8 @@ async function addLogInAttempts(email:string ,user_id:string,ip_address:string,s
             JSON.stringify(
                 {
                     success:true,
-                    message:"addLogInAttempts successful.",
+                    message:"adding LogInAttempts successful.",
+
 
                     
                 }
@@ -585,15 +585,15 @@ async function getLogInAttempts(email:string,user_id:string) {
     }
 
 
-    getLastLockType(user_id);
+    const locktype = await getLastLockType(user_id);
     if(login_attempts){
-    if(login_attempts?.length ===3){
-        if(login_attempts[-1].attempted_at < MINUTES_10 && login_attempts[-1].attempted_at < MINUTES_10 && login_attempts[-1].attempted_at < MINUTES_10)
+    if(login_attempts.length >=3){
+        if(Math.abs(login_attempts[-1].attempted_at -Date.now())< MINUTES_10 && Math.abs(login_attempts[-1].attempted_at -Date.now()) < MINUTES_10 && Math.abs (login_attempts[-1].attempted_at -Date.now()) < MINUTES_10)
          
-         addAccountLocked(email,user_id,Date.now()+MINUTES_10,"short");            
+         addAccountLocked("insert",email,user_id,Date.now()+MINUTES_10,"short","Too many failed attempts. Your account has been locked for 10 minutes.");            
         }
-    else if(){
-
+    if(login_attempts.length>0){
+        if(locktype ==="short" && Math.abs(login_attempts[-1].attempted_at - Date.now()) > MINUTES_10)addAccountLocked("upsert",email,user_id,Date.now()+HOUR,"long","Your account has been locked for 1 hour due to repeated failed attempts. ");
     }
     }
 
@@ -619,16 +619,15 @@ async function getLogInAttempts(email:string,user_id:string) {
 
 }
 
-async function addAccountLocked( email:string,user_id:string,locked_until: number ,lockout_type:string) {
+async function addAccountLocked( action:string,email:string,user_id:string,locked_until: number ,lockout_type:string,message:string) {
 try {
-
-    const { data, error } = await supabase
-    .from('account_lockouts')
-    .insert([
-        { id: user_id, email: email,locked_until:locked_until ,lockout_type:lockout_type},
-    ])
-    .select()
-
+    if(action === "insert"){
+        const {  error } = await supabase
+        .from('account_lockouts')
+        .insert([
+            { id: user_id, email: email,locked_until:locked_until ,lockout_type:lockout_type},
+        ])
+        //.select()
 
     if(error){
     return new Response(
@@ -644,6 +643,60 @@ try {
     );    
 
     }    
+        return new Response(
+            JSON.stringify(
+                {
+                    success:true,
+                    message:message,
+                    
+                    
+                }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );        
+}
+    else if(action === "upsert"){
+        
+        const {  error } = await supabase
+        .from('account_lockouts')
+        .upsert({id: user_id, email: email,locked_until:locked_until ,lockout_type:lockout_type })
+        //.select()
+
+    if(error){
+    return new Response(
+        JSON.stringify(
+            {
+                error: error?.message
+            }
+        ),
+        {
+            status:400,
+            headers:{...corsHeaders,"Content-Type":"application/json"}
+        }
+    );    
+
+    }    
+        return new Response(
+            JSON.stringify(
+                {
+                    success:true,
+                    message:message,
+                    
+                    
+                }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );
+
+
+    }
+
 
     
 } catch (error) {
@@ -674,6 +727,21 @@ async function getLastLockType(user_id:string)  {
     .select('lockout_type')
     .eq('id',user_id)
     
+    if(error){
+    return new Response(
+        JSON.stringify(
+            {
+                error: error?.message
+            }
+        ),
+        {
+            status:400,
+            headers:{...corsHeaders,"Content-Type":"application/json"}
+        }
+    );    
+
+    }
+
     if(account_lockouts){
         return account_lockouts[-1].lockout_type
     }
@@ -681,6 +749,58 @@ async function getLastLockType(user_id:string)  {
     
   } catch (error) {
     
+        return new Response(
+            JSON.stringify(
+                {
+                    error:"getting account lock type   failed"+error
+                }
+            ),
+            {
+                status:500,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );
+
   }
 
+}
+
+async function addSuccessAttempt(email:string) {
+ 
+    try {
+    const {  error } = await supabase
+    .from('account_lockouts')
+    .delete()
+    .eq('email', email)
+       
+    if(error){
+    return new Response(
+        JSON.stringify(
+            {
+                error: error?.message
+            }
+        ),
+        {
+            status:400,
+            headers:{...corsHeaders,"Content-Type":"application/json"}
+        }
+    );    
+
+    }    
+
+    } catch (error) {
+
+        return new Response(
+            JSON.stringify(
+                {
+                    error:"adding success attempt   failed"+error
+                }
+            ),
+            {
+                status:500,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );        
+
+    }
 }

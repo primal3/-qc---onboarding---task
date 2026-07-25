@@ -1,0 +1,9 @@
+# Environment var
+.env
+.env.local
+
+#vs insider
+.vs/
+.vscode/
+#Node modules
+node_modules/

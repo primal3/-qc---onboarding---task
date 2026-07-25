@@ -1,12 +1,12 @@
 import {serve} from "https://deno.land/std@0.177.0/http/server.ts";
-import {createClient} from "@supabase/supabase-js";
+import { createClient } from 'npm:@supabase/supabase-js@^2.46.2'
 //import validator from "validator";
 //import axios from "axios";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ??"";
+const supabaseServiceKey = Deno.env.get("SERVICE_KEY") ??"";
 
-const supabase = createClient(supabaseUrl,supabaseAnonKey);
+const supabase = createClient(supabaseUrl,supabaseServiceKey)
 //8KB
 const MAX_BODY_SIZE = 8*1024;
 
@@ -62,7 +62,7 @@ const APPROVED_INSTITUTIONS = [
 serve(async (req: Request)  =>{
     // Always handle OPTIONS preflight first 
     if (req.method === 'OPTIONS') { 
-    return new Response(null, { status: 204, headers: corsHeaders }); 
+    return new Response("OK", { status: 200, headers: corsHeaders }); 
     }
     try {
         
@@ -119,11 +119,12 @@ serve(async (req: Request)  =>{
         } 
 
         //Read and parse the JSON request body. 
-        const { action,institution, course, academic_year, status,notes} = await req.json();
+        const { action,institution, course, academic_year, status,notes} =JSON.parse(body);
 
         // Case-insensitive check 
         const normalised = APPROVED_INSTITUTIONS.map(i => i.toLowerCase()); 
         //validate institution
+        if(action==="add"){
         if(institution){
         if (!normalised.includes(institution.toLowerCase())) { 
         //return error?('Institution not recognised. Please select from the approved list.') :null; 
@@ -134,7 +135,7 @@ serve(async (req: Request)  =>{
                 }
             ), 
         { 
-            status: 401,
+            status: 400,
               headers:{...corsHeaders,"Content-Type":"application/json"} });        
 
         }    
@@ -148,7 +149,7 @@ serve(async (req: Request)  =>{
                 }
             ), 
         { 
-            status: 401,
+            status: 204,
              headers:{...corsHeaders,"Content-Type":"application/json"} });
         }
         if(!academic_year){
@@ -159,7 +160,7 @@ serve(async (req: Request)  =>{
                 }
             ), 
         { 
-            status: 401,
+            status: 204,
              headers:{...corsHeaders,"Content-Type":"application/json"}});
         }
 
@@ -171,8 +172,10 @@ serve(async (req: Request)  =>{
                 }
             ), 
         { 
-            status: 401,
+            status: 400,
               headers:{...corsHeaders,"Content-Type":"application/json"}});
+        }
+
         }
 
         //}
@@ -289,13 +292,14 @@ async function getApplications(user_id : string) {
                 }
             );
         }        
-
+        
         return new Response(
             JSON.stringify(
                 {
                     success:true,
                     message:"getting applications successful.",
                     data:applications,
+                    institutions:APPROVED_INSTITUTIONS
 
                 }
             ),

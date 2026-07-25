@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>
+            QC Onboarding Task
+        </title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+    <div class="card">
+
+    <!---LOGIN FORM---> 
+    <div id="panel-login" class="form-panel" >
+      <h1>
+        LOGIN
+      </h1>
+        <form action="" id="loginForm" autocomplete="on">
+            <!---email-->
+            <div class="input-group">
+                <label for="loginEmail">
+                 Email
+                </label>
+                <div class="input-wrap">
+                    <input type="email" id="loginEmail" placeholder="you@example.com" required>
+                </div>
+            </div>
+            <!---password-->
+
+            <div class="input-group">
+                <label for="loginPassword">
+                password
+                </label>
+                <div class="input-wrap">
+                    <input type="password" id="loginPassword" placeholder="*********" required>
+                </div>
+            </div>
+            <!---submit-->
+            <button type="submit" class="btn-primary" >
+                LOGIN
+            <!---    <a href="dashboard.html"></a> -->
+            <a href="dashboard.html"></a>
+            </button>
+
+            <div class="separator">or continue with</div>
+        <div class="singup-msg">
+            Don't have an account? <a href="#" id="switchToRegister">Create one</a>
+        </div>            
+        </form>
+    </div>
+
+
+    <!---SIGNUP FORM--->         
+    <div id="panel-register" class="form-panel hidden">
+      <h1>
+        SIGNUP
+      </h1>        
+        <form action="" id="registerForm" autocomplete="on">
+            <!---first name-->
+            <div class="input-group">
+                <label for="regFName">
+                    First name
+                </label>
+                <div class="input-wrap">
+                    <input type="text" id="regFName" placeholder="First name" required>
+                </div>
+            </div>
+            <!---last name-->
+            <div class="input-group">
+                <label for="regLName">
+                    Last name
+                </label>
+                <div class="input-wrap">
+                    <input type="text" id="regLName" placeholder="Last name" required>
+                </div>
+            </div>
+
+            <!---email-->
+            <div class="input-group">
+                <label for="regEmail">
+                    Email
+                </label>
+                <div class="input-wrap">
+                    <input type="email" id="regEmail" placeholder="you@example.com" required>
+                </div>
+            </div>
+            <!---phone-->
+            <div class="input-group">
+                <label for="regPhone">
+                    Phone
+                </label>
+                <div class="input-wrap">
+                    <input type="tel" id="regPhone" placeholder="0123456789" required>
+                </div>
+            </div>
+
+            <!---password-->
+            <div class="input-group">
+                <label for="regPassword">
+                    Password
+                </label>
+                <div class="input-wrap">
+                    <input type="password" id="regPassword" placeholder="********" required>
+                </div>
+            </div>
+        <button type="submit" class="btn-primary">
+            SIGNUP
+        </button>
+        <div class="separator"></div>
+    <div class="singup-msg">
+        Already have an account? <a href="#" id="switchToLogin">Login</a>
+    </div>
+
+    </form>
+    
+    </div>
+
+    </div>
+    <script>        
+     (function(){
+
+        const loginPanel = document.getElementById('panel-login');
+        const registerPanel = document.getElementById('panel-register');        
+        const switchToRegister = document.getElementById('switchToRegister');
+        const switchToLogin = document.getElementById('switchToLogin');
+
+        
+        function setActiveTab (tabId){
+        loginPanel.classList.toggle('hidden',tabId !=='login');
+        registerPanel.classList.toggle('hidden',tabId !=='register');
+
+        }
+        if(switchToRegister){
+   
+            
+            switchToRegister.addEventListener('click',function(e){
+                e.preventDefault();
+                setActiveTab('register');
+            });
+        }        
+        if(switchToLogin){
+            
+            switchToLogin.addEventListener('click',function(e){
+                e.preventDefault();
+                setActiveTab('login');
+            });
+        }
+
+    
+        
+
+    setActiveTab('login');
+    })();   
+    </script>
+        
+    <script type="module" src="auth.js">
+        //import validator from "https://cdn.jsdelivr.net/npm/validator@latest/validator.min.js";
+    </script>
+
+</body>
+</html>
+

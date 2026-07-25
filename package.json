@@ -3,6 +3,14 @@
     "@supabase/supabase-js": "^2.110.8",
     "axios": "^1.18.1",
     "dotenv": "^17.4.2",
-    "validator": "^13.15.35"
+    "parcel": "^2.16.4",
+    "validator": "^13.15.35",
+    "vite": "^8.1.5"
+  },
+  "devDependencies": {
+    "assert": "^2.1.0",
+    "console-browserify": "^1.2.0",
+    "process": "^0.11.10",
+    "util": "^0.12.5"
   }
 }

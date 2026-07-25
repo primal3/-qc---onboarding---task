@@ -1,12 +1,12 @@
 import {serve} from "https://deno.land/std@0.177.0/http/server.ts";
-import {createClient} from "@supabase/supabase-js";
-import validator from "validator";
-import axios from "axios";
+import { createClient } from 'npm:@supabase/supabase-js@^2.46.2'
+import validator from "npm:validator";
+import axios from "npm:axios";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ??"";
+const supabaseServiceKey = Deno.env.get("SERVICE_KEY") ??"";
 
-const supabase = createClient(supabaseUrl,supabaseAnonKey);
+const supabase = createClient(supabaseUrl,supabaseServiceKey);
 //8KB
 const MAX_BODY_SIZE = 8*1024;
 const MINUTE = 60000;
@@ -22,7 +22,7 @@ const corsHeaders = {
 serve(async (req: Request)  =>{
 // Always handle OPTIONS preflight first 
 if (req.method === 'OPTIONS') { 
-return new Response(null, { status: 204, headers: corsHeaders }); 
+return new Response("OK", { status: 200, headers: corsHeaders }); 
 }
 
 try {
@@ -37,23 +37,27 @@ try {
     }
 
     //Read and parse the JSON request body. 
-    const {action,first_name,last_name,email,phone,password,user_id} = await req.json();
+    //const {action,first_name,last_name,email,phone,password,user_id} = await req.json();
+    const {action,first_name,last_name,email,phone,password} = JSON.parse(body);
+
+
     // check for missing fields
     if(!action){
         return new Response(
             JSON.stringify(
                 {error:"action field is required"}
             ),{
-                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }
+    if(action === "singup"){
     if(!first_name || !last_name){
         return new Response(
             JSON.stringify(
                 {error:"first_name and last_name fields are required"}
             ),{
-                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }
@@ -63,7 +67,7 @@ try {
             JSON.stringify(
                 {error:"email and password fields are required"}
             ),{
-                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }    
@@ -73,25 +77,19 @@ try {
             JSON.stringify(
                 {error:"phone field is required"}
             ),{
-                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }    
-
-    if(!user_id){
-        return new Response(
-            JSON.stringify(
-                {error:"user_id field is required"}
-            ),{
-                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
-            }
-        );
-    }    
+    }
+    
 
     //validate
+    if(action === "signup"){
     validateNames(first_name);
     validateNames(last_name);
     validatePhone(phone);
+    }
     validateEmail(email);
     validatePassword(password);
 
@@ -101,7 +99,7 @@ try {
         case"signup":
            return await handleSignUp(first_name,last_name,email,password,phone);
         case "login":
-            return await handleLogIn(email,password,user_id);
+            return await handleLogIn(email,password);
         default:
             return new Response(
                 JSON.stringify({error:"Unknown action: ${action}"}),
@@ -237,7 +235,7 @@ async function addProfile(user_id:string,first_name: string,last_name: string,ph
         );    
 
 }
-async function handleLogIn(email:string,password:string,user_id:string) {
+async function handleLogIn(email:string,password:string) {
      /**
      * todo
      */
@@ -245,7 +243,9 @@ async function handleLogIn(email:string,password:string,user_id:string) {
 
        // check for locked out account
         isAccountLocked(email);
-
+        const user_id = await getUserId(email);
+        
+        
 
         const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
@@ -275,6 +275,11 @@ async function handleLogIn(email:string,password:string,user_id:string) {
                 }
             );
         }
+        let session = data.session;
+        
+        if(!data.session){
+         session = await getSession();
+        }
         addLogInAttempts(email,user_id,ip,true, Date.now());
         addSuccessAttempt(email);
         return new Response(
@@ -283,7 +288,7 @@ async function handleLogIn(email:string,password:string,user_id:string) {
                     success:true,
                     message:"Login successful.",
                     user:data.user,
-                    session:data.session,
+                    session:session,
                     
                 }
             ),
@@ -801,6 +806,89 @@ async function addSuccessAttempt(email:string) {
                 headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );        
+
+    }
+}
+async function getUserId(email:string) {
+    try {
+
+    const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email',email)        
+   
+    if(error){
+    return new Response(
+        JSON.stringify(
+            {
+                error: error?.message
+            }
+        ),
+        {
+            status:400,
+            headers:{...corsHeaders,"Content-Type":"application/json"}
+        }
+    );    
+
+    }      
+    return profiles[-1].id;
+
+    } catch (error) {
+        return new Response(
+            JSON.stringify(
+                {
+                    error:"getting user id   failed error"+error
+                }
+            ),
+            {
+                status:500,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );           
+
+    }
+}
+
+async function getSession() {
+    try {
+    const session = (await supabase.auth.getSession()).data.session;
+    console.log(session?.expires_at); 
+    if(session){
+        if(Math.floor(Date.now())/1000>session?.expires_at)
+        {
+            const { data, error } = await supabase.auth.refreshSession();
+            if(error){
+            return new Response(
+                JSON.stringify(
+                    {
+                        error: error?.message
+                    }
+                ),
+                {
+                    status:400,
+                    headers:{...corsHeaders,"Content-Type":"application/json"}
+                }
+            );    
+
+            }
+   
+            return data?.session?.access_token;
+
+        }else return session.access_token;
+    }    
+
+    } catch (error) {
+        return new Response(
+            JSON.stringify(
+                {
+                    error:`resetting session  failed error :${error}`
+                }
+            ),
+            {
+                status:500,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );         
 
     }
 }

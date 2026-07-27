@@ -63,4 +63,8 @@ Day 7  |  Final testing, documentation, and PR
 7.  Send the PR link in your **14:00 report** on the final day and to <support@querycrest.com>. 
 
 
+![]("src\img\Screenshot 2026-07-27 144833.png")
+![]("src\img\Screenshot 2026-07-27 163851.png")
+![]("src\img\Screenshot 2026-07-27 163855.png")
+
 

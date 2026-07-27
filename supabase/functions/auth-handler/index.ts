@@ -33,7 +33,7 @@ try {
     const body = await req.text();
     
     if(body.length > MAX_BODY_SIZE){
-        return new Response( JSON.stringify({error:"Request body is too large. Max size is ${MAX_BODY_SIZE/1024} KB"}),{status:413,headers:{...corsHeaders,"Content-Type":"application/json"} });
+        return new Response( JSON.stringify({error:`Request body is too large. Max size is ${MAX_BODY_SIZE/1024} KB`}),{status:413,headers:{...corsHeaders,"Content-Type":"application/json"} });
     }
 
     //Read and parse the JSON request body. 
@@ -47,7 +47,7 @@ try {
             JSON.stringify(
                 {error:"action field is required"}
             ),{
-                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }
@@ -57,7 +57,7 @@ try {
             JSON.stringify(
                 {error:"first_name and last_name fields are required"}
             ),{
-                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }
@@ -67,7 +67,7 @@ try {
             JSON.stringify(
                 {error:"email and password fields are required"}
             ),{
-                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }    
@@ -77,7 +77,7 @@ try {
             JSON.stringify(
                 {error:"phone field is required"}
             ),{
-                status:204,headers:{...corsHeaders,"Content-Type":"application/json"}
+                status:400,headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
     }    
@@ -97,12 +97,12 @@ try {
     switch(action){
 
         case"signup":
-           return await handleSignUp(first_name,last_name,email,password,phone);
+             return await handleSignUp(first_name,last_name,email,password,phone);
         case "login":
             return await handleLogIn(email,password);
         default:
             return new Response(
-                JSON.stringify({error:"Unknown action: ${action}"}),
+                JSON.stringify({error:`Unknown action: ${action}`}),
                 {
                     status:400,
                     headers:{...corsHeaders,"Content-Type":"application/json"}
@@ -114,7 +114,7 @@ try {
     //console.error("Error in auth-handler function:",error);
     return new Response(
         JSON.stringify(
-            {error:"Internal server error"+error}
+            {error:`Internal server error: ${error} `}
         ),
         {
             status:500,
@@ -160,7 +160,7 @@ async function handleSignUp(first_name: string,last_name: string,email:string,pa
             );
         }
         //add profile data
-        addProfile(data.user.id,first_name,last_name,phone );
+        await addProfile(data.user.id,first_name,last_name,phone );
 
         return new Response(
             JSON.stringify(
@@ -177,11 +177,11 @@ async function handleSignUp(first_name: string,last_name: string,email:string,pa
             }
         );
     } catch(error){
-        //console.error("Signup error:",error);
+
         return new Response(
             JSON.stringify(
                 {
-                    error:"Signup failed error:" +error
+                    error:`Signup failed error: ${error} `
                 }
             ),
             {
@@ -196,6 +196,8 @@ async function handleSignUp(first_name: string,last_name: string,email:string,pa
 
 }
 async function addProfile(user_id:string,first_name: string,last_name: string,phone: string ){
+    try {
+    
     const { data, error } = await supabase
     .from('profiles')
     .insert([
@@ -233,6 +235,21 @@ async function addProfile(user_id:string,first_name: string,last_name: string,ph
                 headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );    
+        
+    } catch (error) {
+            return new Response(
+                JSON.stringify(
+                    {
+                        error: error
+                    }
+                ),
+                {
+                    status:400,
+                    headers:{...corsHeaders,"Content-Type":"application/json"}
+                }
+            );        
+
+    }
 
 }
 async function handleLogIn(email:string,password:string) {
@@ -242,8 +259,11 @@ async function handleLogIn(email:string,password:string) {
     try {
 
        // check for locked out account
-        isAccountLocked(email);
-        const user_id = await getUserId(email);
+        await isAccountLocked(email);
+        
+
+
+        const user_id = crypto.randomUUID();
         
         
 
@@ -252,6 +272,7 @@ async function handleLogIn(email:string,password:string) {
         password: password
         });
         const ip = await getPublicIP();
+
         if(error){
             /**
              * add lockout timing logic
@@ -260,13 +281,12 @@ async function handleLogIn(email:string,password:string) {
 
 
             
-            addLogInAttempts(email,user_id,ip,false, Date.now());
-            getLogInAttempts(email,user_id);
-            
+            await addLogInAttempts(email,user_id,ip,false, Date.now());
+            await getLogInAttempts(email,user_id);
             return new Response(
                 JSON.stringify(
                     {
-                        error: error?.message
+                        error: `error logining error ${error?.message}` 
                     }
                 ),
                 {
@@ -274,14 +294,17 @@ async function handleLogIn(email:string,password:string) {
                     headers:{...corsHeaders,"Content-Type":"application/json"}
                 }
             );
+
+
         }
+        if(data){
         let session = data.session;
         
         if(!data.session){
          session = await getSession();
         }
-        addLogInAttempts(email,user_id,ip,true, Date.now());
-        addSuccessAttempt(email);
+        await addLogInAttempts(email,user_id,ip,true, Date.now());
+        await addSuccessAttempt(email);
         return new Response(
             JSON.stringify(
                 {
@@ -297,17 +320,17 @@ async function handleLogIn(email:string,password:string) {
                 headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
-
+       }
     } catch(error){
         //console.error("Login error:",error);
         return new Response(
             JSON.stringify(
                 {
-                    error:"Login failed error:"+error
+                    error:`Login failed error: ${error} `   
                 }
             ),
             {
-                status:500,
+                status:400,
                 headers:{...corsHeaders,"Content-Type":"application/json"}
             }
         );
@@ -353,7 +376,7 @@ function validateNames(name:string){
         }
     ),
     {
-        status:500,
+        status:400,
         headers:{...corsHeaders,"Content-Type":"application/json"}
     }
 );
@@ -373,7 +396,7 @@ function validatePhone(phone:string){
         }
     ),
     {
-        status:500,
+        status:400,
         headers:{...corsHeaders,"Content-Type":"application/json"}
     }
 );
@@ -391,7 +414,7 @@ function  validateEmail(email:string){
         }
     ),
     {
-        status:500,
+        status:400,
         headers:{...corsHeaders,"Content-Type":"application/json"}
     }
 );
@@ -412,11 +435,14 @@ function  validatePassword(password:string){
 );
 }
 async function isAccountLocked(email:string) {
-    
+
+    try {
+        let isSameEmail = false;
         const { data: account_lockouts, error } = await supabase
         .from('account_lockouts')
         .select('email')
         
+
             if(error){
                 return new Response(
                     JSON.stringify(
@@ -431,19 +457,63 @@ async function isAccountLocked(email:string) {
                 );
             }        
         if(account_lockouts){
+            
             if(account_lockouts?.length>0){
-            account_lockouts?.forEach((account,_index)=>{
+        
+            for(let index=0;index <account_lockouts.length;index++){
+            const account = account_lockouts[index];
             if(account.email === email){
 
-                
-            validateAccountLockOut(email);
+                isSameEmail = true;
+                break;
 
+
+
+            }             
+            
             }
-            });
-        
+            if(isSameEmail) return await validateAccountLockOut(email);
             }
+         
+         return new Response(
+            JSON.stringify(
+                {
+                    data:`account_lockouts: ${account_lockouts}`   }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+        }else {
+
+        return new Response(
+            JSON.stringify(
+                {
+                    data:"no data"   }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
 
         }
+        
+    } catch (error) {
+
+        return new Response(
+            JSON.stringify(
+                {
+                    error:error                }
+            ),
+            {
+                status:500,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );        
+    }
 
 
 }
@@ -468,12 +538,13 @@ async function validateAccountLockOut(email:string){
                 );
             }
             
-            account_lockouts?.forEach((account,_index)=>{
+           if(account_lockouts){
+             account_lockouts?.forEach((account:any,_index:any)=>{
             if(account.locked_until >Date.now()){
                 return new Response(
                     JSON.stringify(
                         {
-                            error: "Your account is temporarily locked. Please try again in ${math.floor((account.locked_until -Date.now()) /1000/60)} minutes. "
+                            error: `Your account is temporarily locked. Please try again in ${Math.floor((account.locked_until -Date.now()) /1000/60)} minutes. `
                         }
                     ),
                     {
@@ -485,13 +556,39 @@ async function validateAccountLockOut(email:string){
             }
             });
 
+            
+        
+        return new Response(
+            JSON.stringify(
+                {
+                    data:"no data"   }
+            ),
+            {
+                status:400,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );             
+            }else{
+
+        return new Response(
+            JSON.stringify(
+                {
+                    data:"no data"   }
+            ),
+            {
+                status:400,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+        }
 
         } catch(error){
         //console.error("acount_lockout validation error:",error);
         return new Response(
             JSON.stringify(
                 {
-                    error:"acount_lockout validation failed error:"+error
+                    error:`acount_lockout validation failed error: ${error}`
                 }
             ),
             {
@@ -506,12 +603,14 @@ async function validateAccountLockOut(email:string){
 }
 async function addLogInAttempts(email:string ,user_id:string,ip_address:string,success:boolean,attempted_at:number) {
             
+
+
    try {
 
              const {  error } = await supabase
             .from('login_attempts')
             .insert([
-                { id: user_id, email: email, ip_address: ip_address  , success: success, attempted_at:attempted_at },
+                { id: user_id, email: email, ip_address: ip_address  , success: success, attempted_at:new Date(attempted_at) },
             ])
             //.select()
 
@@ -519,7 +618,7 @@ async function addLogInAttempts(email:string ,user_id:string,ip_address:string,s
             return new Response(
                 JSON.stringify(
                     {
-                        error: error?.message
+                        error:`adding  log attempts   failed error: ${error?.message}` 
                     }
                 ),
                 {
@@ -551,7 +650,7 @@ async function addLogInAttempts(email:string ,user_id:string,ip_address:string,s
         return new Response(
             JSON.stringify(
                 {
-                    error:"adding  log attempts   failed"+error
+                    error:`adding  log attempts   failed error: ${error}`
                 }
             ),
             {
@@ -572,13 +671,13 @@ async function getLogInAttempts(email:string,user_id:string) {
     const { data: login_attempts, error } = await supabase
     .from('login_attempts')
     .select('attempted_at')
-    .eq('id',user_id)
+    .eq('email',email)
 
     if(error){
     return new Response(
         JSON.stringify(
             {
-                error: error?.message
+                error:`getting  log attempts   failed error: ${error}`
             }
         ),
         {
@@ -590,17 +689,44 @@ async function getLogInAttempts(email:string,user_id:string) {
     }
 
 
-    const locktype = await getLastLockType(user_id);
+   
     if(login_attempts){
+
+        const locktype = await getLastLockType(email);
     if(login_attempts.length >=3){
-        if(Math.abs(login_attempts[-1].attempted_at -Date.now())< MINUTES_10 && Math.abs(login_attempts[-1].attempted_at -Date.now()) < MINUTES_10 && Math.abs (login_attempts[-1].attempted_at -Date.now()) < MINUTES_10)
+        if(Math.abs(login_attempts.at(-1).attempted_at -Date.now())< MINUTES_10 && Math.abs(login_attempts.at(-1).attempted_at -Date.now()) < MINUTES_10 && Math.abs (login_attempts.at(-1).attempted_at -Date.now()) < MINUTES_10)
          
-         addAccountLocked("insert",email,user_id,Date.now()+MINUTES_10,"short","Too many failed attempts. Your account has been locked for 10 minutes.");            
-        }
+       return  await addAccountLocked("insert",email,user_id,Date.now()+MINUTES_10,"short","Too many failed attempts. Your account has been locked for 10 minutes.");            
+
+    }
     if(login_attempts.length>0){
-        if(locktype ==="short" && Math.abs(login_attempts[-1].attempted_at - Date.now()) > MINUTES_10)addAccountLocked("upsert",email,user_id,Date.now()+HOUR,"long","Your account has been locked for 1 hour due to repeated failed attempts. ");
+        if(locktype ==="short" && Math.abs(login_attempts.at(-1).attempted_at - Date.now()) > MINUTES_10) return await addAccountLocked("upsert",email,user_id,Date.now()+HOUR,"long","Your account has been locked for 1 hour due to repeated failed attempts. ");
     }
-    }
+        return new Response(
+            JSON.stringify(
+                {
+                    data:"no data"   }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        );
+
+    }else {
+
+        return new Response(
+            JSON.stringify(
+                {
+                    data:"no data"   }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+        }
 
 
     } catch (error) {
@@ -608,7 +734,7 @@ async function getLogInAttempts(email:string,user_id:string) {
         return new Response(
             JSON.stringify(
                 {
-                    error:"getting  log attempts   failed"+error
+                    error:`getting  log attempts   failed error: ${error}`
                 }
             ),
             {
@@ -630,7 +756,7 @@ try {
         const {  error } = await supabase
         .from('account_lockouts')
         .insert([
-            { id: user_id, email: email,locked_until:locked_until ,lockout_type:lockout_type},
+            { id: user_id, email: email,locked_until:new Date(locked_until) ,lockout_type:lockout_type},
         ])
         //.select()
 
@@ -638,7 +764,7 @@ try {
     return new Response(
         JSON.stringify(
             {
-                error: error?.message
+                error: `adding  account locked   failed error: ${error}`
             }
         ),
         {
@@ -674,7 +800,7 @@ try {
     return new Response(
         JSON.stringify(
             {
-                error: error?.message
+                error:`adding  account locked   failed error: ${error}`
             }
         ),
         {
@@ -709,7 +835,7 @@ try {
         return new Response(
             JSON.stringify(
                 {
-                    error:"adding  account locked   failed"+error
+                    error:`adding  account locked   failed error: ${error}`
                 }
             ),
             {
@@ -724,13 +850,13 @@ try {
 
 }
 
-async function getLastLockType(user_id:string)  {
+async function getLastLockType(email:string)  {
   try {
     
     const { data: account_lockouts, error } = await supabase
     .from('account_lockouts')
     .select('lockout_type')
-    .eq('id',user_id)
+    .eq('email',email)
     
     if(error){
     return new Response(
@@ -748,8 +874,21 @@ async function getLastLockType(user_id:string)  {
     }
 
     if(account_lockouts){
-        return account_lockouts[-1].lockout_type
-    }
+        return account_lockouts.at(-1).lockout_type
+    }else {
+
+        return new Response(
+            JSON.stringify(
+                {
+                    data:"no data"   }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+        }
 
     
   } catch (error) {
@@ -757,7 +896,7 @@ async function getLastLockType(user_id:string)  {
         return new Response(
             JSON.stringify(
                 {
-                    error:"getting account lock type   failed"+error
+                    error:`getting account lock type   failed error: ${error}`
                 }
             ),
             {
@@ -782,7 +921,7 @@ async function addSuccessAttempt(email:string) {
     return new Response(
         JSON.stringify(
             {
-                error: error?.message
+                error:`adding success attempt   failed error: ${error}`
             }
         ),
         {
@@ -792,13 +931,26 @@ async function addSuccessAttempt(email:string) {
     );    
 
     }    
+else {
 
+        return new Response(
+            JSON.stringify(
+                {
+                    success:true   }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+        }
     } catch (error) {
 
         return new Response(
             JSON.stringify(
                 {
-                    error:"adding success attempt   failed"+error
+                    error:`adding success attempt   failed error: ${error}`
                 }
             ),
             {
@@ -809,7 +961,10 @@ async function addSuccessAttempt(email:string) {
 
     }
 }
-async function getUserId(email:string) {
+
+/**
+ *
+ * async function getUserId(email:string) {
     try {
 
     const { data: profiles, error } = await supabase
@@ -821,7 +976,7 @@ async function getUserId(email:string) {
     return new Response(
         JSON.stringify(
             {
-                error: error?.message
+                error: `getting user id   failed error: ${error.message}`
             }
         ),
         {
@@ -831,13 +986,13 @@ async function getUserId(email:string) {
     );    
 
     }      
-    return profiles[-1].id;
+    return profiles.at(-1).id;
 
     } catch (error) {
         return new Response(
             JSON.stringify(
                 {
-                    error:"getting user id   failed error"+error
+                    error:`getting user id   failed error: ${error}`
                 }
             ),
             {
@@ -848,6 +1003,8 @@ async function getUserId(email:string) {
 
     }
 }
+ 
+ */
 
 async function getSession() {
     try {
@@ -875,7 +1032,20 @@ async function getSession() {
             return data?.session?.access_token;
 
         }else return session.access_token;
-    }    
+    } else {
+
+        return new Response(
+            JSON.stringify(
+                {
+                    data:"no data"   }
+            ),
+            {
+                status:200,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+        }   
 
     } catch (error) {
         return new Response(

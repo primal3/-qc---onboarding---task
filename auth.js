@@ -3,6 +3,41 @@
 import validator from "validator";
 //import validator from "https://cdn.jsdelivr.net/npm/validator@latest/validator.min.js";
 
+ (function(){
+
+        const loginPanel = document.getElementById('panel-login');
+        const registerPanel = document.getElementById('panel-register');        
+        const switchToRegister = document.getElementById('switchToRegister');
+        const switchToLogin = document.getElementById('switchToLogin');
+
+        
+        function setActiveTab (tabId){
+        loginPanel.classList.toggle('hidden',tabId !=='login');
+        registerPanel.classList.toggle('hidden',tabId !=='register');
+
+        }
+        if(switchToRegister){
+   
+            
+            switchToRegister.addEventListener('click',function(e){
+                e.preventDefault();
+                setActiveTab('register');
+            });
+        }        
+        if(switchToLogin){
+            
+            switchToLogin.addEventListener('click',function(e){
+                e.preventDefault();
+                setActiveTab('login');
+            });
+        }
+
+    
+        
+
+    setActiveTab('login');
+    })();   
+
 // form submission auth.js
 document.getElementById('loginForm').addEventListener('submit',function(e){
     e.preventDefault();
@@ -12,10 +47,10 @@ document.getElementById('loginForm').addEventListener('submit',function(e){
         return;
     }
     if(email && password){
-
+        //alert("it works")
         logIn(email,password);
      
-        //window.location.assign('dashboard.html'); 
+        window.location.replace('dashboard.html'); 
     }else {alert('Please fill both fields');
         return;
     }
@@ -77,12 +112,12 @@ async function logIn(email ,password) {
 
     });
     const data = await response.json();
-    console.log(data);
+    if(data){//console.log(data);
     const session = data.session.access_token;
     sessionStorage.setItem(' qc_token',session);
 
-    alert(data.error);
-        
+    if(data.error)    alert(data.error);
+    } 
     } catch (error) {
         alert(error);
     }

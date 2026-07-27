@@ -149,7 +149,7 @@ serve(async (req: Request)  =>{
                 }
             ), 
         { 
-            status: 204,
+            status:400,
              headers:{...corsHeaders,"Content-Type":"application/json"} });
         }
         if(!academic_year){
@@ -160,27 +160,43 @@ serve(async (req: Request)  =>{
                 }
             ), 
         { 
-            status: 204,
+            status: 400,
              headers:{...corsHeaders,"Content-Type":"application/json"}});
         }
-
-        if(status !== 'draft' || status !== 'submitted'){
+        if(!status){
         return new Response(
             JSON.stringify(
                 {
-                error: 'Invalid status.' 
+                error: 'status  is empty . Please enter status.' 
+                }
+            ), 
+        { 
+            status: 400,
+             headers:{...corsHeaders,"Content-Type":"application/json"}});
+        }
+
+
+        /**
+
+        if(status !== "draft" || status !== "submitted"){
+        return new Response(
+            JSON.stringify(
+                {
+                error: `Invalid statuses ${status} . ` 
                 }
             ), 
         { 
             status: 400,
               headers:{...corsHeaders,"Content-Type":"application/json"}});
         }
-
-        }
+        * 
+         */
 
         //}
 
 
+
+        }
 
         //Handle authentication
         switch(action){
@@ -192,7 +208,7 @@ serve(async (req: Request)  =>{
                 return await getApplications(user.id);
             default:
                 return new Response(
-                    JSON.stringify({error:"Unknown action: ${action}"}),
+                    JSON.stringify({error:`Unknown action: ${action}`}),
                     {
                         status:400,
                         headers:{...corsHeaders,"Content-Type":"application/json"}
@@ -204,7 +220,7 @@ serve(async (req: Request)  =>{
     } catch (error) {
         return new Response(
             JSON.stringify(
-                {error:"Internal server error"+error}
+                {error:`Internal server error:${error}`}
             ),
             {
                 status:500,
@@ -218,10 +234,15 @@ serve(async (req: Request)  =>{
 
 async function addApplications(user_id : string,institution:string, course:string, academic_year:string, status:string,notes:string) {
     try{
+        //let app_id =0;
+        //const isEmpty = await isApplicationEmpty(user_id);
+        //const id = await getApplicationId(user_id);
+        //if(!isEmpty) app_id = Number(id)+1;
+        
          const { data, error } = await supabase
         .from('applications')
         .insert([
-            { id:user_id,user_id : user_id,institution:institution, course:course, academic_year:academic_year, status:status,notes:notes },
+            { id:String(crypto.randomUUID()),user_id : user_id,institution:institution, course:course, academic_year:academic_year, status:status,notes:notes },
         ])
         .select()
 
@@ -258,7 +279,7 @@ async function addApplications(user_id : string,institution:string, course:strin
         
         return new Response(
             JSON.stringify(
-                {error:"Internal server error"+error}
+                {error:`Internal servererror:${error}`}
             ),
             {
                 status:500,
@@ -314,7 +335,88 @@ async function getApplications(user_id : string) {
         
         return new Response(
             JSON.stringify(
-                {error:"Internal server error"+error}
+                {error:`Internal server error:${error}`}
+            ),
+            {
+                status:500,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+    }
+
+}
+
+async function isApplicationEmpty(user_id : string) {
+    try {
+
+    const { data: applications, error } = await supabase
+        .from('applications')
+        .select('*')
+        .eq("user_id",user_id)
+        if(error){
+            return new Response(
+                JSON.stringify(
+                    {
+                        error: error.message
+                    }
+                ),
+                {
+                    status:400,
+                    headers:{...corsHeaders,"Content-Type":"application/json"}
+                }
+            );
+        }        
+         if(applications.length ===0)return true;
+         else return false ;
+                   
+
+
+    } catch (error) {
+        
+        return new Response(
+            JSON.stringify(
+                {error:`Internal server error:${error}`}
+            ),
+            {
+                status:500,
+                headers:{...corsHeaders,"Content-Type":"application/json"}
+            }
+        ); 
+
+    }
+
+}
+async function getApplicationId(user_id : string) {
+    try {
+
+    const { data: applications, error } = await supabase
+        .from('applications')
+        .select('*')
+        .eq("user_id",user_id)
+        if(error){
+            return new Response(
+                JSON.stringify(
+                    {
+                        error: error.message
+                    }
+                ),
+                {
+                    status:400,
+                    headers:{...corsHeaders,"Content-Type":"application/json"}
+                }
+            );
+        }        
+         if(applications.length ===0)return 0;
+         else return applications.user_id;
+                   
+
+
+    } catch (error) {
+        
+        return new Response(
+            JSON.stringify(
+                {error:`Internal server error:${error}`}
             ),
             {
                 status:500,

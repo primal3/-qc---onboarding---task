@@ -1,15 +1,18 @@
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<html>
+    <head>
         <meta charset="UTF-8">
         <title>
             QC Onboarding Task
         </title>
-        <link rel="stylesheet" href="/qc-onboarding-task.2cdaf7bc.css">
+        <link rel="stylesheet" href="style.css">
     </head>
     <body>
     <div class="card">
 
     <!---LOGIN FORM---> 
-    <div id="panel-login" class="form-panel">
+    <div id="panel-login" class="form-panel" >
       <h1>
         LOGIN
       </h1>
@@ -20,7 +23,7 @@
                  Email
                 </label>
                 <div class="input-wrap">
-                    <input type="email" id="loginEmail" placeholder="you@example.com" required="">
+                    <input type="email" id="loginEmail" placeholder="you@example.com" required>
                 </div>
             </div>
             <!---password-->
@@ -30,14 +33,14 @@
                 password
                 </label>
                 <div class="input-wrap">
-                    <input type="password" id="loginPassword" placeholder="*********" required="">
+                    <input type="password" id="loginPassword" placeholder="*********" required>
                 </div>
             </div>
             <!---submit-->
-            <button type="submit" class="btn-primary">
+            <button type="submit" class="btn-primary" >
                 LOGIN
             <!---    <a href="dashboard.html"></a> -->
-            <a href="/dashboard.html"></a>
+            
             </button>
 
             <div class="separator">or continue with</div>
@@ -60,7 +63,7 @@
                     First name
                 </label>
                 <div class="input-wrap">
-                    <input type="text" id="regFName" placeholder="First name" required="">
+                    <input type="text" id="regFName" placeholder="First name" required>
                 </div>
             </div>
             <!---last name-->
@@ -69,7 +72,7 @@
                     Last name
                 </label>
                 <div class="input-wrap">
-                    <input type="text" id="regLName" placeholder="Last name" required="">
+                    <input type="text" id="regLName" placeholder="Last name" required>
                 </div>
             </div>
 
@@ -79,7 +82,7 @@
                     Email
                 </label>
                 <div class="input-wrap">
-                    <input type="email" id="regEmail" placeholder="you@example.com" required="">
+                    <input type="email" id="regEmail" placeholder="you@example.com" required>
                 </div>
             </div>
             <!---phone-->
@@ -88,7 +91,7 @@
                     Phone
                 </label>
                 <div class="input-wrap">
-                    <input type="tel" id="regPhone" placeholder="0123456789" required="">
+                    <input type="tel" id="regPhone" placeholder="0123456789" required>
                 </div>
             </div>
 
@@ -98,7 +101,7 @@
                     Password
                 </label>
                 <div class="input-wrap">
-                    <input type="password" id="regPassword" placeholder="********" required="">
+                    <input type="password" id="regPassword" placeholder="********" required>
                 </div>
             </div>
         <button type="submit" class="btn-primary">
@@ -114,33 +117,12 @@
     </div>
 
     </div>
-    <script>(function() {
-    const loginPanel = document.getElementById('panel-login');
-    const registerPanel = document.getElementById('panel-register');
-    const switchToRegister = document.getElementById('switchToRegister');
-    const switchToLogin = document.getElementById('switchToLogin');
-    function setActiveTab(tabId) {
-        loginPanel.classList.toggle('hidden', tabId !== 'login');
-        registerPanel.classList.toggle('hidden', tabId !== 'register');
-    }
-    if (switchToRegister) switchToRegister.addEventListener('click', function(e) {
-        e.preventDefault();
-        setActiveTab('register');
-    });
-    if (switchToLogin) switchToLogin.addEventListener('click', function(e) {
-        e.preventDefault();
-        setActiveTab('login');
-    });
-    setActiveTab('login');
-})();
 
-</script>
         
-    <script type="module" src="/qc-onboarding-task.92bab706.js">
+    <script type="module" src="auth.js">
         //import validator from "https://cdn.jsdelivr.net/npm/validator@latest/validator.min.js";
     </script>
 
+</body>
+</html>
 
-
-
-</body></html>
